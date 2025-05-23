@@ -44,8 +44,7 @@ function generateGround() {
     groundSegments.push(height);
   }
   }
-
-
+  
 function getGroundY(x) {
   const index = Math.floor(x / segmentWidth);
   return canvas.height - (groundSegments[index] || 100);
@@ -147,6 +146,18 @@ function drawHelicopter(cameraX) {
   const hy = getGroundY(helicopter.x) - helicopter.height - helicopter.offsetY;
   ctx.fillStyle = "#888";
   ctx.fillRect(hx, hy, helicopter.width, helicopter.height);
+
+  // Draw rotors
+  ctx.beginPath();
+  ctx.arc(hx + helicopter.width / 2, hy - 10, 30, 0, Math.PI * 2);
+  ctx.fillStyle = "rgba(0, 0, 0, 0.4)";
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(hx + helicopter.width / 2 - 40, hy - 10);
+  ctx.lineTo(hx + helicopter.width / 2 + 40, hy - 10);
+  ctx.strokeStyle = "black";
+  ctx.lineWidth = 4;
+  ctx.stroke();
   ctx.fillStyle = "black";
   ctx.fillRect(hx + 10, hy + 10, 10, 10);
   ctx.fillRect(hx + 80, hy + 10, 10, 10);
@@ -158,7 +169,7 @@ function drawHelicopter(cameraX) {
   }
 
   if (helicopter.takingOff) {
-    helicopter.offsetY += 1;
+    helicopter.offsetY += 3;
   }
 }
 
@@ -219,7 +230,8 @@ window.addEventListener("keydown", e => {
       resetPlayer();
       helicopter.takingOff = false;
       helicopter.offsetY = 0;
-    }, 3000);
+      playerInHelicopter = false;
+    }, 1500);
   }
 });
 
