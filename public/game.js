@@ -34,15 +34,17 @@ const jumpStrength = -15;
 const segmentWidth = 20;
 const groundSegments = [];
 function generateGround() {
-  let phase = Math.random() * 10;
-  for (let i = 0; i < canvas.width / segmentWidth + 100; i++) {
-    let freq = 0.2 + Math.random() * 0.3;
-    let amp = 20 + Math.random() * 40;
-    let bump = Math.random() < 0.1 ? 40 + Math.random() * 60 : 0;
-    let height = 80 + Math.sin(i * freq + phase) * amp + bump;
+  let baseHeight = 120;
+  let smoothness = 0.15;
+  let height = baseHeight;
+  for (let i = 0; i < canvas.width / segmentWidth + 300; i++) {
+    let variation = (Math.random() - 0.5) * 20;
+    height += variation * smoothness;
+    height = Math.max(50, Math.min(200, height));
     groundSegments.push(height);
   }
   }
+  
 
 function getGroundY(x) {
   const index = Math.floor(x / segmentWidth);
@@ -97,28 +99,42 @@ function resetPlayer() {
   em31.angle = 0;
 }
 
-function drawGround() {
-  ctx.fillStyle = "#4CAF50";
+function drawGround(cameraX = 0) {
   ctx.beginPath();
   ctx.moveTo(0, canvas.height);
   for (let i = 0; i < groundSegments.length; i++) {
-    ctx.lineTo(i * segmentWidth, canvas.height - groundSegments[i]);
+    const x = i * segmentWidth - cameraX;
+    const y = canvas.height - groundSegments[i];
+    ctx.lineTo(x, y);
   }
   ctx.lineTo(canvas.width, canvas.height);
   ctx.closePath();
+  ctx.fillStyle = "#4CAF50";
+  ctx.fill();
+
+  ctx.beginPath();
+  for (let i = 0; i < groundSegments.length; i++) {
+    const x = i * segmentWidth - cameraX;
+    const y = canvas.height - groundSegments[i];
+    ctx.lineTo(x, y);
+  }
+  ctx.lineTo(canvas.width, canvas.height);
+  ctx.closePath();
+  ctx.fillStyle = "#6D4C41";
   ctx.fill();
 }
 
-function drawPlayer() {
+function drawPlayerWithCamera(cameraX) {
+  const px = player.x - cameraX;
   ctx.fillStyle = "#37474F";
-  ctx.fillRect(player.x, player.y, player.width, player.height);
+  ctx.fillRect(px, player.y, player.width, player.height);
   ctx.beginPath();
-  ctx.arc(player.x + player.width / 2, player.y - 10, 10, 0, Math.PI * 2);
+  ctx.arc(px + player.width / 2, player.y - 10, 10, 0, Math.PI * 2);
   ctx.fillStyle = "#FFCCBC";
   ctx.fill();
 
   ctx.save();
-  ctx.translate(player.x + player.width / 2, player.y + 30);
+  ctx.translate(px + player.width / 2, player.y + 30);
   ctx.rotate(em31.angle);
   ctx.fillStyle = "white";
   ctx.fillRect(-em31.width / 2, -em31.height / 2, em31.width, em31.height);
@@ -135,11 +151,16 @@ function drawHUD() {
 function gameLoop() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   updatePlayer();
-  drawGround();
-  drawPlayer();
+
+  const cameraX = Math.max(0, player.x - canvas.width / 2);
+  if (player.x < 50) player.x = 50; // prevent backtracking too far
+
+  drawGround(cameraX);
+  drawPlayerWithCamera(cameraX);
   drawHUD();
   requestAnimationFrame(gameLoop);
 }
 
 generateGround();
 gameLoop();
+
