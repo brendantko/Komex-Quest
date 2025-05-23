@@ -23,7 +23,10 @@ let em31 = {
   angle: 0,
   damage: 0,
   maxDamage: 100,
-  balanceSpeed: 0.02
+  balanceSpeed: 0.02,
+  battery: 100,
+  maxBattery: 100,
+  scanning: false
 };
 
 // Gravity and movement
@@ -44,7 +47,7 @@ function generateGround() {
     groundSegments.push(height);
   }
   }
-  
+
 function getGroundY(x) {
   const index = Math.floor(x / segmentWidth);
   return canvas.height - (groundSegments[index] || 100);
@@ -60,8 +63,36 @@ canvas.addEventListener("mousemove", e => {
   em31.angle += deltaY * 0.05 - 0.01;
 });
 
+canvas.addEventListener("mousedown", () => {
+  if (em31.battery > 0) em31.scanning = true;
+});
+
+canvas.addEventListener("mouseup", () => {
+  em31.scanning = false;
+});
+
 // Game loop
 function updatePlayer() {
+  // Scan battery usage
+  if (em31.scanning && em31.battery > 0) {
+    em31.battery -= 0.5;
+    if (em31.battery < 0) em31.battery = 0;
+    scanObjects.forEach(obj => {
+      if (!obj.found && Math.abs(obj.x - player.x) < 40) {
+        obj.found = true;
+        player.score += obj.points;
+      }
+    });
+  } else {
+    em31.scanning = false;
+  }
+  // Scan battery usage
+  if (em31.scanning && em31.battery > 0) {
+    em31.battery -= 0.5;
+    if (em31.battery < 0) em31.battery = 0;
+  } else {
+    em31.scanning = false;
+  }
   if (keys["KeyA"]) player.x -= 5;
   if (keys["KeyD"]) player.x += 5;
   if (keys["Space"] && !player.isJumping) {
@@ -139,6 +170,18 @@ function drawPlayerWithCamera(cameraX) {
   ctx.fillStyle = "white";
   ctx.fillRect(-em31.width / 2, -em31.height / 2, em31.width, em31.height);
   ctx.restore();
+
+  if (em31.scanning) {
+    ctx.save();
+    ctx.fillStyle = "rgba(0, 255, 0, 0.3)";
+    ctx.beginPath();
+    ctx.moveTo(px + player.width / 2, player.y + 30);
+    ctx.lineTo(px + player.width / 2 - 40, player.y + 100);
+    ctx.lineTo(px + player.width / 2 + 40, player.y + 100);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
 }
 
 function drawHelicopter(cameraX) {
@@ -178,6 +221,29 @@ function drawHUD() {
   ctx.font = "16px Arial";
   ctx.fillText("Damage: " + Math.floor(em31.damage), 10, 20);
   ctx.fillText("Score: " + player.score, 10, 40);
+  ctx.fillText("Battery: " + Math.floor(em31.battery), 10, 60);
+}
+
+function drawScanObjects(cameraX) {
+  scanObjects.forEach(obj => {
+    if (obj.found) {
+      const ox = obj.x - cameraX;
+      const oy = obj.y;
+      ctx.fillStyle = obj.type === "rock" ? "#555" : "#ccc";
+      if (obj.type === "skull") {
+        ctx.beginPath();
+        ctx.arc(ox, oy, 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "black";
+        ctx.fillRect(ox - 2, oy - 2, 1, 1);
+        ctx.fillRect(ox + 1, oy - 2, 1, 1);
+      } else {
+        ctx.beginPath();
+        ctx.ellipse(ox, oy, 8, 5, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  });
 }
 
 function gameLoop() {
@@ -205,6 +271,7 @@ for (let i = 0; i < 10; i++) {
   drawGround(cameraX);
   if (!playerInHelicopter) drawPlayerWithCamera(cameraX);
   drawHelicopter(cameraX);
+drawScanObjects(cameraX);
 drawHUD();
   frameCount++;
   requestAnimationFrame(gameLoop);
@@ -234,6 +301,18 @@ window.addEventListener("keydown", e => {
     }, 1500);
   }
 });
+
+// Object definitions for scanning
+const scanObjects = [];
+for (let i = 100; i < 1900; i += Math.random() * 300 + 100) {
+  scanObjects.push({
+    x: i,
+    y: getGroundY(i) + 10 + Math.random() * 30,
+    found: false,
+    type: Math.random() > 0.5 ? "rock" : "skull",
+    points: Math.random() > 0.5 ? 100 : 500
+  });
+}
 
 generateGround();
 gameLoop();
