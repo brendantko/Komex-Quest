@@ -37,14 +37,14 @@ function generateGround() {
   let baseHeight = 120;
   let smoothness = 0.15;
   let height = baseHeight;
-  for (let i = 0; i < canvas.width / segmentWidth + 300; i++) {
+  for (let i = 0; i < 2000 / segmentWidth; i++) {
     let variation = (Math.random() - 0.5) * 20;
     height += variation * smoothness;
     height = Math.max(50, Math.min(200, height));
     groundSegments.push(height);
   }
   }
-  
+
 
 function getGroundY(x) {
   const index = Math.floor(x / segmentWidth);
@@ -142,6 +142,26 @@ function drawPlayerWithCamera(cameraX) {
   ctx.restore();
 }
 
+function drawHelicopter(cameraX) {
+  const hx = helicopter.x - cameraX;
+  const hy = getGroundY(helicopter.x) - helicopter.height - helicopter.offsetY;
+  ctx.fillStyle = "#888";
+  ctx.fillRect(hx, hy, helicopter.width, helicopter.height);
+  ctx.fillStyle = "black";
+  ctx.fillRect(hx + 10, hy + 10, 10, 10);
+  ctx.fillRect(hx + 80, hy + 10, 10, 10);
+
+  if (!playerInHelicopter && Math.abs(player.x - helicopter.x) < 60) {
+    ctx.fillStyle = "black";
+    ctx.font = "18px Arial";
+    ctx.fillText("Press H to board", hx - 30, hy - 10);
+  }
+
+  if (helicopter.takingOff) {
+    helicopter.offsetY += 1;
+  }
+}
+
 function drawHUD() {
   ctx.fillStyle = "black";
   ctx.font = "16px Arial";
@@ -151,7 +171,7 @@ function drawHUD() {
 
 function gameLoop() {
   // Sky background
-ctx.fillStyle = "#87CEEB";
+ctx.fillStyle = "#aaaaaa";
 ctx.fillRect(0, 0, canvas.width, canvas.height);
 
 // Draw random clouds
@@ -165,19 +185,43 @@ for (let i = 0; i < 10; i++) {
   ctx.fillStyle = "#fff";
   ctx.fill();
 }
-ctx.clearRect(0, 0, canvas.width, canvas.height);
+// ctx.clearRect removed to preserve sky and clouds
   updatePlayer();
 
   const cameraX = Math.max(0, player.x - canvas.width / 2);
   if (player.x < 50) player.x = 50; // prevent backtracking too far
 
   drawGround(cameraX);
-  drawPlayerWithCamera(cameraX);
-  drawHUD();
+  if (!playerInHelicopter) drawPlayerWithCamera(cameraX);
+  drawHelicopter(cameraX);
+drawHUD();
   frameCount++;
   requestAnimationFrame(gameLoop);
 }
 
 let frameCount = 0;
+let helicopter = {
+  x: 1950,
+  y: 0,
+  width: 100,
+  height: 40,
+  takingOff: false,
+  offsetY: 0
+};
+
+let playerInHelicopter = false;
+
+window.addEventListener("keydown", e => {
+  if (e.code === "KeyH" && Math.abs(player.x - helicopter.x) < 60) {
+    playerInHelicopter = true;
+    helicopter.takingOff = true;
+    setTimeout(() => {
+      resetPlayer();
+      helicopter.takingOff = false;
+      helicopter.offsetY = 0;
+    }, 3000);
+  }
+});
+
 generateGround();
 gameLoop();
