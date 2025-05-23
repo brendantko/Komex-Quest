@@ -124,6 +124,7 @@ function drawGround(cameraX = 0) {
   ctx.fill();
 }
 
+
 function drawPlayerWithCamera(cameraX) {
   const px = player.x - cameraX;
   ctx.fillStyle = "#37474F";
@@ -149,7 +150,22 @@ function drawHUD() {
 }
 
 function gameLoop() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  // Sky background
+ctx.fillStyle = "#87CEEB";
+ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+// Draw random clouds
+for (let i = 0; i < 10; i++) {
+  const cloudX = (i * 300 + frameCount * 0.2) % (canvas.width + 300) - 150;
+  const cloudY = 50 + Math.sin(i) * 20;
+  ctx.beginPath();
+  ctx.arc(cloudX, cloudY, 30, 0, Math.PI * 2);
+  ctx.arc(cloudX + 40, cloudY + 10, 25, 0, Math.PI * 2);
+  ctx.arc(cloudX - 40, cloudY + 10, 25, 0, Math.PI * 2);
+  ctx.fillStyle = "#fff";
+  ctx.fill();
+}
+ctx.clearRect(0, 0, canvas.width, canvas.height);
   updatePlayer();
 
   const cameraX = Math.max(0, player.x - canvas.width / 2);
@@ -158,9 +174,10 @@ function gameLoop() {
   drawGround(cameraX);
   drawPlayerWithCamera(cameraX);
   drawHUD();
+  frameCount++;
   requestAnimationFrame(gameLoop);
 }
 
+let frameCount = 0;
 generateGround();
 gameLoop();
-
