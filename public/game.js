@@ -34,10 +34,16 @@ const jumpStrength = -15;
 const segmentWidth = 20;
 const groundSegments = [];
 function generateGround() {
+  let phase = Math.random() * 10;
   for (let i = 0; i < canvas.width / segmentWidth + 100; i++) {
-    groundSegments.push(80 + Math.sin(i * 0.5) * 30 + Math.random() * 20);
+    let freq = 0.2 + Math.random() * 0.3;
+    let amp = 20 + Math.random() * 40;
+    let bump = Math.random() < 0.1 ? 40 + Math.random() * 60 : 0;
+    let height = 80 + Math.sin(i * freq + phase) * amp + bump;
+    groundSegments.push(height);
   }
-}
+  }
+
 function getGroundY(x) {
   const index = Math.floor(x / segmentWidth);
   return canvas.height - (groundSegments[index] || 100);
