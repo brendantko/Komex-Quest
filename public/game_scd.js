@@ -1,24 +1,29 @@
-
 // Create canvas and basic setup
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-// Load the walking sprite sheet
+
+// Load the Sprite Image with Error Handling
 const walkImage = new Image();
-walkImage.src = "assets/sprites/player_walk.png";
+walkImage.src = "assets/sprites/player_walk.png"; // Make sure this is saved in the correct folder
+
 walkImage.onerror = () => {
   console.error("❌ Failed to load walking sprite sheet.");
 };
 
-// Animation settings
-const walkFrameCols = 2;
-const walkFrameRows = 2;
+// Animation Settings
+const walkFrameCols = 2; // frames per row
+const walkFrameRows = 2; // frames per column
 const walkTotalFrames = 4;
 let currentFrame = 0;
 let frameTimer = 0;
 const frameSpeed = 3;
+
+
+
+
 
 // Player state
 let player = {
@@ -46,57 +51,30 @@ let em31 = {
 const gravity = 0.3;
 const jumpStrength = -12;
 
-// Ground and fog generation
+// Ground generation
 const segmentWidth = 20;
 const groundSegments = [];
-const fogSegments = [];
-
 function generateGround() {
-  const count = Math.floor(canvas.width / segmentWidth) + 200;
-  groundSegments.length = 0;
-  for (let i = 0; i < count; i++) {
+  for (let i = 0; i < canvas.width / segmentWidth + 100; i++) {
     groundSegments.push(80 + Math.sin(i * 0.5) * 30 + Math.random() * 20);
   }
-  initializeFog();
 }
-
 function getGroundY(x) {
   const index = Math.floor(x / segmentWidth);
   return canvas.height - (groundSegments[index] || 100);
-}
-
-function initializeFog() {
-  const count = Math.floor(canvas.width / segmentWidth) + 200;
-  fogSegments.length = 0;
-  for (let i = 0; i < count; i++) {
-    fogSegments.push(false);
-  }
 }
 
 // Controls
 const keys = {};
 window.addEventListener("keydown", e => keys[e.code] = true);
 window.addEventListener("keyup", e => keys[e.code] = false);
-
 canvas.addEventListener("mousemove", e => {
   const centerY = canvas.height / 2;
   const deltaY = (e.clientY - centerY) / canvas.height;
   em31.angle += deltaY * 0.05 - 0.01;
 });
 
-canvas.addEventListener("click", () => {
-  const playerCenterX = player.x + player.width / 2;
-  const radius = 100;
-  for (let i = 0; i < fogSegments.length; i++) {
-    const segmentX = i * segmentWidth + segmentWidth / 2;
-    const distance = Math.abs(segmentX - playerCenterX);
-    if (distance < radius) {
-      fogSegments[i] = true;
-    }
-  }
-});
-
-// Game logic
+// Game loop
 function updatePlayer() {
   if (keys["KeyA"]) player.x -= 5;
   if (keys["KeyD"]) player.x += 5;
@@ -104,7 +82,6 @@ function updatePlayer() {
     player.vy = jumpStrength;
     player.isJumping = true;
   }
-
   player.vy += gravity;
   player.y += player.vy;
 
@@ -115,6 +92,7 @@ function updatePlayer() {
     player.isJumping = false;
   }
 
+  // EM31 damage logic
   const em31TipY = player.y + 30 + Math.sin(em31.angle) * 20;
   if (Math.abs(em31.angle) > 0.6 || em31TipY > groundY) {
     em31.damage += 0.3;
@@ -134,7 +112,6 @@ function resetPlayer() {
   em31.angle = 0;
 }
 
-// Drawing
 function drawGround() {
   ctx.fillStyle = "#4CAF50";
   ctx.beginPath();
@@ -147,26 +124,16 @@ function drawGround() {
   ctx.fill();
 }
 
-function drawFog() {
-  for (let i = 0; i < fogSegments.length; i++) {
-    if (!fogSegments[i]) {
-      const x = i * segmentWidth + segmentWidth / 2;
-      const y = canvas.height - groundSegments[i];
-      const gradient = ctx.createLinearGradient(x, y, x, canvas.height);
-      gradient.addColorStop(0, "rgba(0, 0, 0, 0.9)");
-      gradient.addColorStop(1, "rgba(0, 0, 0, 0.5)");
-      ctx.fillStyle = gradient;
-      ctx.fillRect(x - segmentWidth / 2, y, segmentWidth, canvas.height - y);
-    }
-  }
-}
 
 function drawPlayer() {
   const isWalking = keys["KeyA"] || keys["KeyD"];
   const spriteImage = walkImage;
+
+
   const frameWidth = spriteImage.width / walkFrameCols;
   const frameHeight = spriteImage.height / walkFrameRows;
 
+  // Update animation frame if walking
   if (isWalking) {
     frameTimer++;
     if (frameTimer >= frameSpeed) {
@@ -181,7 +148,9 @@ function drawPlayer() {
   const row = Math.floor(currentFrame / walkFrameCols);
 
   if (spriteImage.complete && spriteImage.naturalWidth > 0) {
+    // Optional: flip for left movement
     const flip = keys["KeyA"] && !keys["KeyD"];
+
     ctx.save();
     if (flip) {
       ctx.translate(player.x + player.width, player.y);
@@ -203,6 +172,7 @@ function drawPlayer() {
     ctx.fillRect(player.x, player.y, player.width, player.height);
   }
 
+  // Draw EM31 tool
   ctx.save();
   ctx.translate(player.x + player.width / 2, player.y + 30);
   ctx.rotate(em31.angle);
@@ -211,6 +181,8 @@ function drawPlayer() {
   ctx.restore();
 }
 
+
+
 function drawHUD() {
   ctx.fillStyle = "black";
   ctx.font = "16px Arial";
@@ -218,18 +190,22 @@ function drawHUD() {
   ctx.fillText("Score: " + player.score, 10, 40);
 }
 
-// Game loop
 function gameLoop() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   updatePlayer();
   drawGround();
-  drawFog();
   drawPlayer();
   drawHUD();
   requestAnimationFrame(gameLoop);
 }
 
+//generateGround();
+//gameLoop();
+
 walkImage.onload = () => {
   generateGround();
   gameLoop();
 };
+
+
+
