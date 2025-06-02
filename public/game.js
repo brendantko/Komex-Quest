@@ -14,6 +14,8 @@ let player = {
   height: 60,
   isJumping: false,
   score: 0,
+  jumpCount: 0,
+  maxJumps: 2
 };
 
 // EM31 state
@@ -30,7 +32,7 @@ let em31 = {
 };
 
 // Gravity and movement
-const gravity = 0.8;
+const gravity = 0.7;
 const jumpStrength = -15;
 
 // Ground generation
@@ -55,6 +57,7 @@ function getGroundY(x) {
 
 // Controls
 const keys = {};
+let jumpKeyHeld = false;
 window.addEventListener("keydown", e => keys[e.code] = true);
 window.addEventListener("keyup", e => keys[e.code] = false);
 canvas.addEventListener("mousemove", e => {
@@ -95,19 +98,42 @@ function updatePlayer() {
   }
   if (keys["KeyA"]) player.x -= 5;
   if (keys["KeyD"]) player.x += 5;
-  if (keys["Space"] && !player.isJumping) {
-    player.vy = jumpStrength;
-    player.isJumping = true;
+  if (keys["Space"] && player.jumpCount < player.maxJumps && !jumpKeyHeld) {
+  player.vy = jumpStrength;
+  player.jumpCount++;
+  jumpKeyHeld = true;
   }
+
   player.vy += gravity;
   player.y += player.vy;
 
   const groundY = getGroundY(player.x);
-  if (player.y + player.height > groundY) {
-    player.y = groundY - player.height;
-    player.vy = 0;
-    player.isJumping = false;
+  let onPlatform = false;
+
+  skyPlatforms.forEach(p => {
+    const isWithinX = player.x + player.width > p.x && player.x < p.x + p.width;
+    const isFalling = player.vy >= 0;
+    const isAbovePlatform = player.y + player.height <= p.y + player.vy;
+    const willTouchPlatform = player.y + player.height + player.vy >= p.y;
+
+    if (isWithinX && isFalling && isAbovePlatform && willTouchPlatform) {
+      // Snap to platform
+      player.y = p.y - player.height;
+      player.vy = 0;
+      player.isJumping = false;
+      player.jumpCount = 0;
+      onPlatform = true;
+    }
+  });
+
+  if (!onPlatform && player.y + player.height > groundY) {
+  player.y = groundY - player.height;
+  player.vy = 0;
+  player.isJumping = false;
+  player.jumpCount = 0; // ✅ Reset double jump on ground contact
   }
+
+
 
   // EM31 damage logic
   const em31TipY = player.y + 30 + Math.sin(em31.angle) * 20;
@@ -153,6 +179,26 @@ function drawGround(cameraX = 0) {
   ctx.fillStyle = "#6D4C41";
   ctx.fill();
 }
+
+
+
+function drawSkyPlatforms(cameraX) {
+  skyPlatforms.forEach(p => {
+    const px = p.x - cameraX;
+    const py = p.y;
+
+    // Grass top
+    ctx.fillStyle = "#4CAF50";
+    ctx.fillRect(px, py, p.width, 6);
+
+    // Dirt body
+    ctx.fillStyle = "#8D6E63";
+    ctx.fillRect(px, py + 6, p.width, p.height - 6);
+  });
+}
+
+
+
 
 
 function drawPlayerWithCamera(cameraX) {
@@ -269,6 +315,9 @@ for (let i = 0; i < 10; i++) {
   if (player.x < 50) player.x = 50; // prevent backtracking too far
 
   drawGround(cameraX);
+
+  drawSkyPlatforms(cameraX);
+
   if (!playerInHelicopter) drawPlayerWithCamera(cameraX);
   drawHelicopter(cameraX);
 drawScanObjects(cameraX);
@@ -289,6 +338,25 @@ let helicopter = {
 
 let playerInHelicopter = false;
 
+// Sky Platforms
+const skyPlatforms = [];
+
+function generateSkyPlatforms() {
+  const spacing = 400; // space between platforms
+  const baseY = canvas.height / 2;
+
+  for (let i = 0; i < 4; i++) {
+    skyPlatforms.push({
+      x: 300 + i * spacing,
+      y: baseY - Math.random() * 100, // vary the height a bit
+      width: 250, // wider platforms
+      height: 20
+    });
+  }
+}
+
+
+
 window.addEventListener("keydown", e => {
   if (e.code === "KeyH" && Math.abs(player.x - helicopter.x) < 60) {
     playerInHelicopter = true;
@@ -301,6 +369,13 @@ window.addEventListener("keydown", e => {
     }, 1500);
   }
 });
+
+// Detect Key Release for Space (avoids jump spamming)
+window.addEventListener("keyup", e => {
+  keys[e.code] = false;
+  if (e.code === "Space") jumpKeyHeld = false;
+});
+
 
 // Object definitions for scanning
 const scanObjects = [];
@@ -315,4 +390,5 @@ for (let i = 100; i < 1900; i += Math.random() * 300 + 100) {
 }
 
 generateGround();
+generateSkyPlatforms();
 gameLoop();
