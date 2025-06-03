@@ -167,6 +167,21 @@ function resetPlayer() {
 }
 
 function drawGround(cameraX = 0) {
+  // 🌱 DIRT BODY (fill down infinitely)
+  ctx.beginPath();
+  ctx.moveTo(0, canvas.height);
+  for (let i = 0; i < groundSegments.length; i++) {
+    const x = i * segmentWidth - cameraX;
+    const y = canvas.height - groundSegments[i];
+    ctx.lineTo(x, y);
+  }
+  ctx.lineTo(canvas.width, canvas.height * 10); // dirt extends way down
+  ctx.lineTo(0, canvas.height * 10);
+  ctx.closePath();
+  ctx.fillStyle = "#6D4C41"; // dirt
+  ctx.fill();
+
+  // 🌿 GRASS LAYER (draw AFTER dirt)
   ctx.beginPath();
   ctx.moveTo(0, canvas.height);
   for (let i = 0; i < groundSegments.length; i++) {
@@ -176,20 +191,10 @@ function drawGround(cameraX = 0) {
   }
   ctx.lineTo(canvas.width, canvas.height);
   ctx.closePath();
-  ctx.fillStyle = "#4CAF50";
-  ctx.fill();
-
-  ctx.beginPath();
-  for (let i = 0; i < groundSegments.length; i++) {
-    const x = i * segmentWidth - cameraX;
-    const y = canvas.height - groundSegments[i];
-    ctx.lineTo(x, y);
-  }
-  ctx.lineTo(canvas.width, canvas.height);
-  ctx.closePath();
-  ctx.fillStyle = "#6D4C41";
+  ctx.fillStyle = "#4CAF50"; // green grass
   ctx.fill();
 }
+
 
 
 
@@ -304,52 +309,46 @@ function drawScanObjects(cameraX) {
 }
 
 function gameLoop() {
-  // Calculate camera position first
-  const cameraX = Math.max(0, player.x - canvas.width / 2);
-  if (player.x < 50) player.x = 50;
-  
-  // 🌄 Draw background image with parallax effect
+  const zoom = 0.7; // Zoom level: 1.0 = normal, <1 = zoom out
+  const cameraX = Math.max(0, player.x - canvas.width / 2 / zoom); // Adjust for zoom
+
+  ctx.save();              // Save canvas state
+  ctx.scale(zoom, zoom);   // 🔍 Apply zoom-out transformation
+
+  // 🌄 Background with parallax
   const bgScrollX = cameraX * 0.1;
   const imageWidth = bgImage.width;
   const offset = Math.floor(bgScrollX % imageWidth);
-
-  // Tile the image to fill the screen
-  for (let x = -offset; x < canvas.width; x += imageWidth) {
-    ctx.drawImage(bgImage, x, 0, imageWidth, canvas.height);
+  for (let x = -offset; x < canvas.width / zoom; x += imageWidth) {
+    ctx.drawImage(bgImage, x, 0, imageWidth, canvas.height / zoom);
   }
 
+  // 🌤️ Clouds
+  for (let i = 0; i < 10; i++) {
+    const cloudX = (i * 300 + frameCount * 0.2) % (canvas.width / zoom + 300) - 150;
+    const cloudY = 50 + Math.sin(i) * 20;
+    ctx.beginPath();
+    ctx.arc(cloudX, cloudY, 30, 0, Math.PI * 2);
+    ctx.arc(cloudX + 40, cloudY + 10, 25, 0, Math.PI * 2);
+    ctx.arc(cloudX - 40, cloudY + 10, 25, 0, Math.PI * 2);
+    ctx.fillStyle = "#fff";
+    ctx.fill();
+  }
 
-
-
-
-// Draw random clouds
-for (let i = 0; i < 10; i++) {
-  const cloudX = (i * 300 + frameCount * 0.2) % (canvas.width + 300) - 150;
-  const cloudY = 50 + Math.sin(i) * 20;
-  ctx.beginPath();
-  ctx.arc(cloudX, cloudY, 30, 0, Math.PI * 2);
-  ctx.arc(cloudX + 40, cloudY + 10, 25, 0, Math.PI * 2);
-  ctx.arc(cloudX - 40, cloudY + 10, 25, 0, Math.PI * 2);
-  ctx.fillStyle = "#fff";
-  ctx.fill();
-}
-// ctx.clearRect removed to preserve sky and clouds
   updatePlayer();
-
-  
-  if (player.x < 50) player.x = 50; // prevent backtracking too far
-
   drawGround(cameraX);
-
   drawSkyPlatforms(cameraX);
-
   if (!playerInHelicopter) drawPlayerWithCamera(cameraX);
   drawHelicopter(cameraX);
   drawScanObjects(cameraX);
-  drawHUD();
+
+  ctx.restore(); // 💡 Undo zoom so HUD isn't affected
+  drawHUD();     // HUD drawn at normal scale
+
   frameCount++;
   requestAnimationFrame(gameLoop);
 }
+
 
 let frameCount = 0;
 let helicopter = {
