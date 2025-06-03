@@ -4,6 +4,17 @@ const ctx = canvas.getContext("2d");
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
+// Backround Image
+const bgImage = new Image();
+bgImage.src = "assets/BackgroundMountains.png"; // Replace with your own image URL
+
+// Once image is loaded, start the game
+bgImage.onload = () => {
+  generateGround();
+  generateSkyPlatforms();
+  gameLoop();
+};
+
 // Player state
 let player = {
   x: 100,
@@ -293,9 +304,23 @@ function drawScanObjects(cameraX) {
 }
 
 function gameLoop() {
-  // Sky background
-ctx.fillStyle = "#aaaaaa";
-ctx.fillRect(0, 0, canvas.width, canvas.height);
+  // Calculate camera position first
+  const cameraX = Math.max(0, player.x - canvas.width / 2);
+  if (player.x < 50) player.x = 50;
+  
+  // 🌄 Draw background image with parallax effect
+  const bgScrollX = cameraX * 0.1;
+  const imageWidth = bgImage.width;
+  const offset = Math.floor(bgScrollX % imageWidth);
+
+  // Tile the image to fill the screen
+  for (let x = -offset; x < canvas.width; x += imageWidth) {
+    ctx.drawImage(bgImage, x, 0, imageWidth, canvas.height);
+  }
+
+
+
+
 
 // Draw random clouds
 for (let i = 0; i < 10; i++) {
@@ -311,7 +336,7 @@ for (let i = 0; i < 10; i++) {
 // ctx.clearRect removed to preserve sky and clouds
   updatePlayer();
 
-  const cameraX = Math.max(0, player.x - canvas.width / 2);
+  
   if (player.x < 50) player.x = 50; // prevent backtracking too far
 
   drawGround(cameraX);
@@ -320,8 +345,8 @@ for (let i = 0; i < 10; i++) {
 
   if (!playerInHelicopter) drawPlayerWithCamera(cameraX);
   drawHelicopter(cameraX);
-drawScanObjects(cameraX);
-drawHUD();
+  drawScanObjects(cameraX);
+  drawHUD();
   frameCount++;
   requestAnimationFrame(gameLoop);
 }
@@ -389,6 +414,4 @@ for (let i = 100; i < 1900; i += Math.random() * 300 + 100) {
   });
 }
 
-generateGround();
-generateSkyPlatforms();
-gameLoop();
+
